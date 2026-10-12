@@ -907,16 +907,16 @@
   </nav>
 
   <script>
-    // Initial Market Data
+    // Initial Market Data (Live Calibrated)
     const instruments = [
-      { symbol: 'XAUUSD', name: 'Gold / US Dollar', price: 2654.40, change: 0.85, spread: 1.8, pipSize: 0.01, tickValue: 1.0 },
-      { symbol: 'US100', name: 'Nasdaq 100 Index', price: 20280.50, change: 0.45, spread: 1.2, pipSize: 0.25, tickValue: 5.0 },
-      { symbol: 'EURUSD', name: 'Euro / US Dollar', price: 1.09340, change: -0.22, spread: 0.6, pipSize: 0.0001, tickValue: 10.0 },
-      { symbol: 'GBPUSD', name: 'British Pound / USD', price: 1.30680, change: -0.40, spread: 0.9, pipSize: 0.0001, tickValue: 10.0 },
-      { symbol: 'USDJPY', name: 'US Dollar / Yen', price: 149.250, change: 0.55, spread: 0.7, pipSize: 0.01, tickValue: 6.7 },
-      { symbol: 'USOIL', name: 'WTI Crude Oil', price: 75.80, change: -1.15, spread: 2.4, pipSize: 0.01, tickValue: 10.0 },
-      { symbol: 'BTCUSD', name: 'Bitcoin / US Dollar', price: 64280.00, change: 2.40, spread: 4.5, pipSize: 1.0, tickValue: 1.0 },
-      { symbol: 'ETHUSD', name: 'Ethereum / US Dollar', price: 2540.50, change: 1.75, spread: 2.8, pipSize: 0.1, tickValue: 1.0 }
+      { symbol: 'XAUUSD', name: 'Gold / US Dollar', price: 4221.90, change: 0.85, spread: 1.8, pipSize: 0.01, tickValue: 1.0 },
+      { symbol: 'US100', name: 'Nasdaq 100 Index', price: 31236.50, change: 0.45, spread: 1.2, pipSize: 0.25, tickValue: 5.0 },
+      { symbol: 'EURUSD', name: 'Euro / US Dollar', price: 1.12130, change: 0.07, spread: 0.6, pipSize: 0.0001, tickValue: 10.0 },
+      { symbol: 'GBPUSD', name: 'British Pound / USD', price: 1.32470, change: -0.18, spread: 0.9, pipSize: 0.0001, tickValue: 10.0 },
+      { symbol: 'USDJPY', name: 'US Dollar / Yen', price: 158.300, change: 0.42, spread: 0.7, pipSize: 0.01, tickValue: 6.3 },
+      { symbol: 'USOIL', name: 'WTI Crude Oil', price: 90.35, change: -0.85, spread: 2.4, pipSize: 0.01, tickValue: 10.0 },
+      { symbol: 'BTCUSD', name: 'Bitcoin / US Dollar', price: 84106.00, change: 2.40, spread: 4.5, pipSize: 1.0, tickValue: 1.0 },
+      { symbol: 'ETHUSD', name: 'Ethereum / US Dollar', price: 2564.30, change: 1.75, spread: 2.8, pipSize: 0.1, tickValue: 1.0 }
     ];
 
     const signals = [
@@ -926,11 +926,11 @@
         direction: 'LONG',
         setup: 'Institutional Liquidity Sweep & Reversal',
         state: 'CONFIRMED',
-        score: 92,
-        netR: 2.2,
-        entry: 2654.40,
-        sl: 2648.00,
-        tp1: 2668.50
+        score: 93,
+        netR: 2.8,
+        entry: 4221.90,
+        sl: 4213.90,
+        tp1: 4244.30
       },
       {
         id: 'SIG-US100-102',
@@ -938,11 +938,11 @@
         direction: 'LONG',
         setup: 'Fair Value Gap Imbalance Continuation',
         state: 'CONFIRMED',
-        score: 89,
-        netR: 2.4,
-        entry: 20280.50,
-        sl: 20220.00,
-        tp1: 20425.00
+        score: 90,
+        netR: 2.8,
+        entry: 31236.50,
+        sl: 31181.50,
+        tp1: 31390.50
       },
       {
         id: 'SIG-EURUSD-103',
@@ -950,23 +950,23 @@
         direction: 'SHORT',
         setup: 'Displacement Order Block Mitigation',
         state: 'WAITING_FOR_CONFIRMATION',
-        score: 81,
-        netR: 2.1,
-        entry: 1.09340,
-        sl: 1.09540,
-        tp1: 1.08920
+        score: 82,
+        netR: 2.8,
+        entry: 1.12130,
+        sl: 1.12280,
+        tp1: 1.11710
       },
       {
-        id: 'SIG-GBPUSD-104',
-        symbol: 'GBPUSD',
-        direction: 'SHORT',
+        id: 'SIG-BTCUSD-104',
+        symbol: 'BTCUSD',
+        direction: 'LONG',
         setup: 'Change of Character (CHoCH) Structural Shift',
         state: 'POTENTIAL',
-        score: 76,
-        netR: 2.0,
-        entry: 1.30680,
-        sl: 1.30950,
-        tp1: 1.30140
+        score: 77,
+        netR: 2.9,
+        entry: 84106.00,
+        sl: 83506.00,
+        tp1: 85846.00
       }
     ];
 
@@ -1110,19 +1110,19 @@
 
       // Generate 40 synthetic realistic candles
       const candles = [];
-      let base = 2642;
+      let base = 4212.0;
       for (let i = 0; i < 35; i++) {
         const open = base;
-        const trend = Math.sin(i * 0.25) * 3 + (i > 25 ? 5 : -1);
-        const close = open + trend + (Math.random() * 4 - 2);
-        const high = Math.max(open, close) + Math.random() * 3;
-        const low = Math.min(open, close) - Math.random() * 3;
+        const trend = Math.sin(i * 0.25) * 4.0 + (i > 25 ? 6.0 : -1.5);
+        const close = open + trend + (Math.random() * 5.0 - 2.5);
+        const high = Math.max(open, close) + Math.random() * 4.0;
+        const low = Math.min(open, close) - Math.random() * 4.0;
         candles.push({ open, high, low, close });
         base = close;
       }
 
-      const minPrice = Math.min(...candles.map(c => c.low)) - 2;
-      const maxPrice = Math.max(...candles.map(c => c.high)) + 2;
+      const minPrice = Math.min(...candles.map(c => c.low)) - 3;
+      const maxPrice = Math.max(...candles.map(c => c.high)) + 3;
       const priceRange = maxPrice - minPrice;
 
       const slotWidth = (width - 60) / candles.length;
@@ -1138,7 +1138,7 @@
       for (let g = 0; g < 4; g++) {
         const y = 20 + g * ((height - 40) / 3);
         ctx.beginPath();
-        ctx.moveTo(0, y);
+        ctx.moveTo(0, width - 55);
         ctx.lineTo(width - 55, y);
         ctx.stroke();
 
@@ -1149,8 +1149,8 @@
       }
 
       // FVG Zone Overlay
-      const fvgTop = toY(2656);
-      const fvgBot = toY(2651);
+      const fvgTop = toY(4226.0);
+      const fvgBot = toY(4218.0);
       ctx.fillStyle = 'rgba(0, 229, 186, 0.12)';
       ctx.fillRect(0, fvgTop, width - 55, Math.abs(fvgBot - fvgTop));
       ctx.fillStyle = '#00E5BA';
@@ -1179,9 +1179,9 @@
       });
 
       // Entry & SL Lines
-      const entryY = toY(2654.40);
-      const slY = toY(2648.00);
-      const tpY = toY(2668.50);
+      const entryY = toY(4221.90);
+      const slY = toY(4213.90);
+      const tpY = toY(4244.30);
 
       // Entry
       ctx.strokeStyle = '#00E5BA';
@@ -1191,7 +1191,7 @@
       ctx.lineTo(width - 55, entryY);
       ctx.stroke();
       ctx.fillStyle = '#00E5BA';
-      ctx.fillText('ENTRY 2654.40', 10, entryY - 4);
+      ctx.fillText('ENTRY 4221.90', 10, entryY - 4);
 
       // Stop Loss
       ctx.strokeStyle = '#FF4B55';
@@ -1201,7 +1201,7 @@
       ctx.lineTo(width - 55, slY);
       ctx.stroke();
       ctx.fillStyle = '#FF4B55';
-      ctx.fillText('SL 2648.00', 10, slY - 4);
+      ctx.fillText('SL 4213.90', 10, slY - 4);
 
       // TP1
       ctx.strokeStyle = '#00C896';
@@ -1210,7 +1210,7 @@
       ctx.lineTo(width - 55, tpY);
       ctx.stroke();
       ctx.fillStyle = '#00C896';
-      ctx.fillText('TP1 2668.50 (+2.2R)', 10, tpY - 4);
+      ctx.fillText('TP1 4244.30 (+2.8R)', 10, tpY - 4);
     }
 
     // Risk Calculator Logic

@@ -187,12 +187,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val direction = if (isBullishBias) SignalDirection.LONG else SignalDirection.SHORT
                 val matrix = TopDownAnalysisEngine.performFullTopDownMatrix(multiTfMap, proposedDirectionIsLong = isBullishBias)
 
-                val stopDistance = inst.pipSize * (if (inst.category == AssetCategory.FOREX) 20.0 else 50.0)
+                val stopDistance = when (inst.symbol) {
+                    "XAUUSD" -> 8.00 // $8.00 stop on Gold ($4,220 -> $4,212)
+                    "XAGUSD" -> 0.50 // $0.50 stop on Silver
+                    "US100" -> 55.00 // 55 pts on Nasdaq
+                    "US500" -> 12.00 // 12 pts on S&P 500
+                    "US30" -> 80.00 // 80 pts on Dow
+                    "GER40" -> 45.00 // 45 pts on DAX
+                    "UK100" -> 25.00 // 25 pts on FTSE
+                    "USOIL", "UKOIL" -> 1.10 // $1.10 on Crude Oil
+                    "BTCUSD" -> 600.00 // $600 on Bitcoin ($84,106 -> $83,506)
+                    "ETHUSD" -> 28.00 // $28 on Ethereum
+                    else -> if (inst.quoteCurrency == "JPY") 0.18 else 0.0015 // 15-18 pips on FX
+                }
+
                 val entryPrice = inst.lastPrice
                 val stopLoss = if (direction == SignalDirection.LONG) entryPrice - stopDistance else entryPrice + stopDistance
-                val tp1 = if (direction == SignalDirection.LONG) entryPrice + (stopDistance * 2.2) else entryPrice - (stopDistance * 2.2)
-                val tp2 = if (direction == SignalDirection.LONG) entryPrice + (stopDistance * 3.5) else entryPrice - (stopDistance * 3.5)
-                val tp3 = if (direction == SignalDirection.LONG) entryPrice + (stopDistance * 5.0) else entryPrice - (stopDistance * 5.0)
+                val tp1 = if (direction == SignalDirection.LONG) entryPrice + (stopDistance * 2.8) else entryPrice - (stopDistance * 2.8)
+                val tp2 = if (direction == SignalDirection.LONG) entryPrice + (stopDistance * 4.0) else entryPrice - (stopDistance * 4.0)
+                val tp3 = if (direction == SignalDirection.LONG) entryPrice + (stopDistance * 5.5) else entryPrice - (stopDistance * 5.5)
 
                 val setupType = when (inst.symbol) {
                     "XAUUSD" -> SetupType.LIQUIDITY_SWEEP_REVERSAL
@@ -242,8 +255,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val inst = _selectedInstrument.value
         val sig = _selectedSignal.value
         val entry = sig?.entryPrice ?: inst.lastPrice
-        val sl = sig?.stopLoss ?: (entry - (inst.pipSize * 25.0))
-        val tp = sig?.takeProfit1 ?: (entry + (inst.pipSize * 55.0))
+        val defaultStopDist = when (inst.symbol) {
+            "XAUUSD" -> 8.00
+            "US100" -> 55.00
+            "BTCUSD" -> 600.00
+            else -> if (inst.quoteCurrency == "JPY") 0.18 else 0.0015
+        }
+        val sl = sig?.stopLoss ?: (entry - defaultStopDist)
+        val tp = sig?.takeProfit1 ?: (entry + (defaultStopDist * 2.8))
 
         _riskCalcResult.value = RiskManagementEngine.calculatePositionSize(
             instrument = inst,

@@ -6,19 +6,27 @@ import com.example.model.EconomicEvent
 import com.example.model.Instrument
 import com.example.model.NewsImpact
 import com.example.model.Timeframe
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.Random
 import kotlin.math.abs
 import kotlin.math.sin
 
 object MarketDataEngine {
 
-    private val random = Random(42)
+    private val random = Random(System.currentTimeMillis())
 
     /**
-     * Generates a realistic historical candle series for a given instrument and timeframe
+     * Generates a realistic historical candle series for a given instrument and timeframe,
+     * anchored directly around its current real market price.
      */
     fun generateHistoricalCandles(instrument: Instrument, timeframe: Timeframe, count: Int = 80): List<Candle> {
         val candles = mutableListOf<Candle>()
@@ -26,59 +34,194 @@ object MarketDataEngine {
         val tfMinutes = timeframe.minutes
         val intervalMillis = tfMinutes * 60 * 1000L
         val now = System.currentTimeMillis()
-        var currentClose = basePrice * 0.96 // Start slightly lower to create historical wave
 
+        // Calibrate step volatility to real instrument price dynamics
         val volatility = when {
-            instrument.symbol.startsWith("BTC") -> 0.012
-            instrument.symbol.startsWith("ETH") -> 0.015
-            instrument.symbol.startsWith("XAU") -> 0.006
-            instrument.symbol.startsWith("US100") -> 0.005
-            else -> 0.0018 // Forex pairs
+            instrument.symbol.startsWith("BTC") -> 0.0035
+            instrument.symbol.startsWith("ETH") -> 0.0045
+            instrument.symbol.startsWith("XAU") -> 0.0018 // ~7.50 on 4220 Gold
+            instrument.symbol.startsWith("US100") -> 0.0020 // ~60 pts on 31236 Nasdaq
+            else -> 0.0008 // ~9 pips on Forex
         }
+
+        // Generate series backwards so the latest candle closes precisely at basePrice
+        var walkPrice = basePrice
+        val tempCandles = mutableListOf<Candle>()
 
         for (i in 0 until count) {
-            val candleTime = now - ((count - i) * intervalMillis)
-            val trendComponent = sin(i * 0.15) * (basePrice * volatility * 1.5)
-            val randomFactor = (random.nextGaussian() * volatility * basePrice)
+            val candleTime = now - (i * intervalMillis)
+            val trendFactor = sin(i * 0.18) * (basePrice * volatility * 0.6)
+            val noise = (random.nextGaussian() * volatility * basePrice * 0.5)
 
-            val open = currentClose
-            val close = open + (trendComponent * 0.1) + (randomFactor * 0.4)
-            val high = maxOf(open, close) + abs(randomFactor * 0.6)
-            val low = minOf(open, close) - abs(randomFactor * 0.6)
-            val volume = abs(random.nextGaussian() * 1500.0) + 500.0
+            val close = walkPrice
+            val open = walkPrice - trendFactor - noise
+            val high = maxOf(open, close) + abs(random.nextGaussian() * volatility * basePrice * 0.4)
+            val low = minOf(open, close) - abs(random.nextGaussian() * volatility * basePrice * 0.4)
+            val volume = abs(random.nextGaussian() * 2500.0) + 800.0
 
-            currentClose = close
-            candles.add(Candle(candleTime, open, high, low, close, volume))
+            tempCandles.add(Candle(candleTime, open, high, low, close, volume))
+            walkPrice = open
         }
 
-        // Align the very last candle's close with the instrument's lastPrice
+        // Reverse to chronological order (oldest to newest)
+        tempCandles.reverse()
+        candles.addAll(tempCandles)
+
+        // Ensure the very last candle close strictly equals instrument's real price
         if (candles.isNotEmpty()) {
             val last = candles.last()
-            candles[candles.size - 1] = last.copy(close = instrument.lastPrice)
+            candles[candles.size - 1] = last.copy(
+                close = instrument.lastPrice,
+                high = maxOf(last.high, instrument.lastPrice),
+                low = minOf(last.low, instrument.lastPrice)
+            )
         }
 
         return candles
     }
 
     /**
-     * Real-time tick stream emitting updated quotes and spread fluctuations
+     * Attempts to fetch real live quote from external market API
+     */
+    suspend fun fetchLivePrice(symbol: String): Double? = withContext(Dispatchers.IO) {
+        try {
+            when (symbol) {
+                "BTCUSD" -> {
+                    val res = fetchUrl("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT")
+                    if (res != null) JSONObject(res).optDouble("price", -1.0).takeIf { it > 0 } else null
+                }
+                "ETHUSD" -> {
+                    val res = fetchUrl("https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT")
+                    if (res != null) JSONObject(res).optDouble("price", -1.0).takeIf { it > 0 } else null
+                }
+                "XAUUSD" -> {
+                    val res = fetchUrlWithHeader("https://query1.finance.yahoo.com/v8/finance/chart/GC=F")
+                    parseYahooPrice(res)
+                }
+                "US100" -> {
+                    val res = fetchUrlWithHeader("https://query1.finance.yahoo.com/v8/finance/chart/NQ=F")
+                    parseYahooPrice(res)
+                }
+                "EURUSD" -> {
+                    val res = fetchUrlWithHeader("https://query1.finance.yahoo.com/v8/finance/chart/EURUSD=X")
+                    parseYahooPrice(res)
+                }
+                "GBPUSD" -> {
+                    val res = fetchUrlWithHeader("https://query1.finance.yahoo.com/v8/finance/chart/GBPUSD=X")
+                    parseYahooPrice(res)
+                }
+                "USDJPY" -> {
+                    val res = fetchUrlWithHeader("https://query1.finance.yahoo.com/v8/finance/chart/USDJPY=X")
+                    parseYahooPrice(res)
+                }
+                "USOIL" -> {
+                    val res = fetchUrlWithHeader("https://query1.finance.yahoo.com/v8/finance/chart/CL=F")
+                    parseYahooPrice(res)
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun parseYahooPrice(jsonStr: String?): Double? {
+        if (jsonStr == null) return null
+        return try {
+            val root = JSONObject(jsonStr)
+            val chart = root.getJSONObject("chart")
+            val resultArr = chart.getJSONArray("result")
+            val meta = resultArr.getJSONObject(0).getJSONObject("meta")
+            meta.optDouble("regularMarketPrice", -1.0).takeIf { it > 0 }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun fetchUrl(urlString: String): String? {
+        return try {
+            val url = URL(urlString)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.connectTimeout = 3000
+            conn.readTimeout = 3000
+            conn.requestMethod = "GET"
+            if (conn.responseCode == 200) {
+                val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                val sb = StringBuilder()
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    sb.append(line)
+                }
+                reader.close()
+                sb.toString()
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun fetchUrlWithHeader(urlString: String): String? {
+        return try {
+            val url = URL(urlString)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.connectTimeout = 3000
+            conn.readTimeout = 3000
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0")
+            if (conn.responseCode == 200) {
+                val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                val sb = StringBuilder()
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    sb.append(line)
+                }
+                reader.close()
+                sb.toString()
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Real-time tick stream: fetches real network prices periodically and applies micro-tick updates
      */
     fun streamLiveTicks(instruments: List<Instrument>): Flow<List<Instrument>> = flow {
         var currentList = instruments.toMutableList()
+        var cycleCounter = 0
+
         while (true) {
             delay(1500)
+            cycleCounter++
+
+            // Every 10 cycles (~15s), query live market APIs for key benchmarks
+            val livePriceMap = mutableMapOf<String, Double>()
+            if (cycleCounter % 10 == 0) {
+                listOf("BTCUSD", "ETHUSD", "XAUUSD", "US100", "EURUSD").forEach { sym ->
+                    val liveP = fetchLivePrice(sym)
+                    if (liveP != null && liveP > 0) {
+                        livePriceMap[sym] = liveP
+                    }
+                }
+            }
+
             val updated = currentList.map { inst ->
-                val tickNoise = (random.nextGaussian() * inst.pipSize * 0.8)
-                val newPrice = (inst.lastPrice + tickNoise).coerceAtLeast(0.0001)
-                val spreadNoise = (random.nextGaussian() * 0.1).coerceIn(-0.2, 0.3)
-                val newSpread = (inst.spreadPips + spreadNoise).coerceIn(0.4, 5.0)
-                val halfSpread = (newSpread * inst.pipSize) / 2.0
+                val realP = livePriceMap[inst.symbol]
+                val base = realP ?: inst.lastPrice
+                val tickStep = when {
+                    inst.symbol.startsWith("BTC") -> 2.5
+                    inst.symbol.startsWith("XAU") -> 0.25
+                    inst.symbol.startsWith("US100") -> 1.50
+                    else -> inst.pipSize * 0.8
+                }
+                val tickNoise = (random.nextGaussian() * tickStep)
+                val newPrice = (base + tickNoise).coerceAtLeast(0.0001)
+                val halfSpread = (inst.spreadPips * inst.pipSize) / 2.0
 
                 inst.copy(
                     lastPrice = newPrice,
                     bidPrice = newPrice - halfSpread,
                     askPrice = newPrice + halfSpread,
-                    spreadPips = Math.round(newSpread * 10.0) / 10.0,
                     lastUpdated = System.currentTimeMillis()
                 )
             }
@@ -87,16 +230,13 @@ object MarketDataEngine {
         }
     }
 
-    /**
-     * Scheduled macroeconomic events calendar
-     */
     val upcomingEconomicEvents: List<EconomicEvent> = listOf(
         EconomicEvent(
             id = "EV-1",
             title = "US Core CPI YoY",
             currency = "USD",
             impact = NewsImpact.HIGH,
-            scheduledTime = System.currentTimeMillis() + (2 * 3600 * 1000), // in 2 hours
+            scheduledTime = System.currentTimeMillis() + (4 * 3600 * 1000),
             previous = "3.2%",
             forecast = "3.1%",
             actual = null,
@@ -129,32 +269,6 @@ object MarketDataEngine {
             surprise = null,
             isBlackoutActive = false,
             relevanceSummary = "Primary labor market indicator driving Federal Reserve dual mandate."
-        ),
-        EconomicEvent(
-            id = "EV-4",
-            title = "UK Retail Sales MoM",
-            currency = "GBP",
-            impact = NewsImpact.MEDIUM,
-            scheduledTime = System.currentTimeMillis() + (5 * 3600 * 1000),
-            previous = "0.6%",
-            forecast = "-0.2%",
-            actual = null,
-            surprise = null,
-            isBlackoutActive = false,
-            relevanceSummary = "UK consumer resilience metric."
-        ),
-        EconomicEvent(
-            id = "EV-5",
-            title = "OPEC+ Ministerial Meeting",
-            currency = "USD",
-            impact = NewsImpact.HIGH,
-            scheduledTime = System.currentTimeMillis() + (72 * 3600 * 1000),
-            previous = "Quota Extension",
-            forecast = "Gradual Phase-in",
-            actual = null,
-            surprise = null,
-            isBlackoutActive = false,
-            relevanceSummary = "Crucial supply quota decisions for USOIL and UKOIL crude benchmarks."
         )
     )
 }
