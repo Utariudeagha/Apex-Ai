@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>APEX SNIPER AI — Multi-Asset Trading Intelligence</title>
+  <meta name="description" content="Institutional multi-asset trading intelligence terminal featuring 8-timeframe top-down analysis, market structure (BOS/CHoCH), liquidity sweeps, and strict risk engine.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070B14;
+      --surface-dark: #0D1424;
+      --surface-elevated: #1A2744;
+      --surface-variant: #131D33;
+      --border-dark: #1E2D4A;
+      --cyan-accent: #00E5BA;
+      --bullish-green: #00C896;
+      --bearish-red: #FF4B55;
+      --warning-amber: #FFB703;
+      --info-blue: #3A86FF;
+      --text-primary: #F1F5F9;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      padding-bottom: 70px;
+    }
+
+    code, .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Header Bar */
+    header {
+      background: var(--surface-dark);
+      border-bottom: 1px solid var(--border-dark);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--cyan-accent);
+      letter-spacing: 1.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-subtitle {
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+      letter-spacing: 0.5px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface-variant);
+      border: 1px solid var(--border-dark);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      color: var(--cyan-accent);
+      font-weight: 600;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--bullish-green);
+      box-shadow: 0 0 8px var(--bullish-green);
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+
+    /* Session Clock Bar */
+    .session-bar {
+      background: var(--surface-dark);
+      border-bottom: 1px solid var(--border-dark);
+      padding: 6px 16px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      overflow-x: auto;
+      white-space: nowrap;
+      gap: 12px;
+    }
+
+    .session-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--text-muted);
+    }
+
+    .session-item.active {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .session-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .session-item.active .session-dot {
+      background: var(--bullish-green);
+    }
+
+    .session-item.overlap .session-dot {
+      background: var(--cyan-accent);
+    }
+
+    /* Core Banner */
+    .core-rule-banner {
+      background: var(--surface-dark);
+      border: 1px solid rgba(0, 229, 186, 0.25);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 12px 16px;
+    }
+
+    .core-rule-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .core-rule-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--cyan-accent);
+      letter-spacing: 0.5px;
+    }
+
+    .badge-counter {
+      background: rgba(0, 229, 186, 0.15);
+      color: var(--cyan-accent);
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .core-rule-text {
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      padding: 0 16px;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Tab Page Views */
+    .tab-page {
+      display: none;
+    }
+
+    .tab-page.active {
+      display: block;
+    }
+
+    /* Horizontal Market Ticker */
+    .ticker-container {
+      margin-bottom: 14px;
+    }
+
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .ticker-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+
+    .ticker-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .quote-card {
+      background: var(--surface-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      padding: 8px 12px;
+      min-width: 130px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .quote-card:hover, .quote-card.active {
+      border-color: var(--cyan-accent);
+    }
+
+    .quote-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .quote-symbol {
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .quote-change {
+      font-size: 0.68rem;
+      font-weight: 600;
+    }
+
+    .quote-price {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--cyan-accent);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .quote-spread {
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Signal Cards */
+    .signal-card {
+      background: var(--surface-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.2s;
+    }
+
+    .signal-card:hover {
+      border-color: var(--cyan-accent);
+      transform: translateY(-1px);
+    }
+
+    .signal-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .direction-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .direction-badge.long {
+      background: rgba(0, 200, 150, 0.18);
+      color: var(--bullish-green);
+    }
+
+    .direction-badge.short {
+      background: rgba(255, 75, 85, 0.18);
+      color: var(--bearish-red);
+    }
+
+    .status-tag {
+      font-size: 0.62rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .status-tag.confirmed {
+      background: rgba(0, 200, 150, 0.18);
+      color: var(--bullish-green);
+    }
+
+    .status-tag.waiting, .status-tag.potential {
+      background: rgba(255, 183, 3, 0.18);
+      color: var(--warning-amber);
+    }
+
+    .signal-setup-title {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+
+    .metrics-bar {
+      background: var(--surface-variant);
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .metric-col span:first-child {
+      display: block;
+      font-size: 0.58rem;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Chart Module */
+    .chart-box {
+      background: var(--surface-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .tf-selector {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+    }
+
+    .tf-btn {
+      background: var(--surface-variant);
+      border: 1px solid var(--border-dark);
+      color: var(--text-secondary);
+      padding: 4px 8px;
+      font-size: 0.68rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .tf-btn.active {
+      background: var(--cyan-accent);
+      color: var(--bg-dark);
+      border-color: var(--cyan-accent);
+      font-weight: 700;
+    }
+
+    #chartCanvas {
+      width: 100%;
+      height: 280px;
+      border-radius: 6px;
+      background: #090E1A;
+    }
+
+    /* 8-Timeframe Matrix */
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.72rem;
+      margin-top: 8px;
+    }
+
+    .matrix-table th {
+      text-align: left;
+      padding: 6px 8px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-dark);
+      font-size: 0.65rem;
+    }
+
+    .matrix-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(30, 45, 74, 0.4);
+    }
+
+    .bias-tag {
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.62rem;
+      font-weight: 600;
+    }
+
+    .bias-tag.bullish {
+      background: rgba(0, 200, 150, 0.15);
+      color: var(--bullish-green);
+    }
+
+    .bias-tag.bearish {
+      background: rgba(255, 75, 85, 0.15);
+      color: var(--bearish-red);
+    }
+
+    /* Risk Calculator */
+    .calc-card {
+      background: var(--surface-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .input-group {
+      margin-bottom: 12px;
+    }
+
+    .input-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .calc-input {
+      width: 100%;
+      background: var(--surface-variant);
+      border: 1px solid var(--border-dark);
+      border-radius: 6px;
+      color: var(--text-primary);
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .calc-input:focus {
+      outline: none;
+      border-color: var(--cyan-accent);
+    }
+
+    .hero-stat {
+      background: var(--surface-elevated);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+    }
+
+    .hero-stat .val {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--cyan-accent);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Bottom Navigation */
+    nav.bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface-dark);
+      border-top: 1px solid var(--border-dark);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 4px;
+      z-index: 100;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.65rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: color 0.15s;
+    }
+
+    .nav-item.active {
+      color: var(--cyan-accent);
+      font-weight: 700;
+    }
+
+    .nav-icon {
+      font-size: 1.05rem;
+    }
+
+    /* Scanner Table */
+    .scanner-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+    }
+
+    .scanner-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.72rem;
+      white-space: nowrap;
+    }
+
+    .scanner-table th {
+      background: var(--surface-dark);
+      padding: 8px 10px;
+      color: var(--text-muted);
+      text-align: left;
+      font-size: 0.65rem;
+    }
+
+    .scanner-table td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border-dark);
+      background: var(--bg-dark);
+    }
+
+    .scanner-table tr:hover td {
+      background: var(--surface-variant);
+      cursor: pointer;
+    }
+
+    /* Android APK / Netlify Portal Notice */
+    .apk-notice {
+      background: linear-gradient(135deg, rgba(0, 229, 186, 0.1), rgba(58, 134, 255, 0.1));
+      border: 1px solid rgba(0, 229, 186, 0.3);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .apk-notice-text {
+      font-size: 0.72rem;
+      color: var(--text-primary);
+    }
+
+    .apk-notice-badge {
+      background: var(--cyan-accent);
+      color: var(--bg-dark);
+      font-weight: 700;
+      font-size: 0.65rem;
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand-group">
+      <div class="brand-title">
+        <span>🎯</span> APEX SNIPER AI
+      </div>
+      <div class="brand-subtitle">Multi-Asset Intelligence • Risk-First Execution</div>
+    </div>
+    <div class="status-badge">
+      <span class="pulse-dot"></span>
+      <span id="liveStatusText">L2 LIVE (38ms)</span>
+    </div>
+  </header>
+
+  <!-- Session Clock -->
+  <div class="session-bar">
+    <div class="session-item"><span class="session-dot"></span> TOKYO (Closed)</div>
+    <div class="session-item active"><span class="session-dot"></span> LONDON (Active)</div>
+    <div class="session-item active overlap"><span class="session-dot"></span> NEW YORK (Active Overlap)</div>
+    <div class="session-item"><span class="session-dot"></span> SYDNEY (Closed)</div>
+  </div>
+
+  <!-- Core Mission Banner -->
+  <div class="core-rule-banner">
+    <div class="core-rule-header">
+      <div class="core-rule-title">CORE RULE: NO VALID SETUP = NO SIGNAL</div>
+      <div class="badge-counter" id="activeSetupCount">2 Setups Qualified</div>
+    </div>
+    <div class="core-rule-text">
+      Apex Sniper AI evaluates 6 scoring categories and enforces 8 mandatory hard filters. If a setup fails net R (&lt;2.0R), spread threshold, news blackout or structural invalidation, it is strictly rejected.
+    </div>
+  </div>
+
+  <main>
+    <!-- TAB 1: TERMINAL DASHBOARD -->
+    <div id="tab-dashboard" class="tab-page active">
+      
+      <!-- Android App Integration Notice -->
+      <div class="apk-notice">
+        <div class="apk-notice-text">
+          <strong>Institutional Web & Android Sync:</strong> Connected via GitHub. Full native Android APK available via project settings.
+        </div>
+        <span class="apk-notice-badge">Synced</span>
+      </div>
+
+      <!-- Live Ticker -->
+      <div class="ticker-container">
+        <div class="section-label">
+          <span>Institutional Market Feed (L2)</span>
+          <span style="color: var(--cyan-accent); font-size: 0.65rem;">Live Spreads</span>
+        </div>
+        <div class="ticker-row" id="tickerRow">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Confirmed Signals -->
+      <div class="section-label">
+        <span style="color: var(--cyan-accent);">Confirmed High-Probability Setups</span>
+        <span style="color: var(--bullish-green); font-size: 0.65rem;">Score &ge; 85 Passed</span>
+      </div>
+
+      <div id="confirmedSignalsList">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Developing Setups -->
+      <div class="section-label" style="margin-top: 14px;">
+        <span style="color: var(--warning-amber);">Developing / Pending Confirmation</span>
+        <span style="color: var(--warning-amber); font-size: 0.65rem;">Awaiting Trigger</span>
+      </div>
+
+      <div id="developingSignalsList">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- TAB 2: SCANNER -->
+    <div id="tab-scanner" class="tab-page">
+      <div class="section-label">
+        <span>25-Asset Multi-Timeframe Scanner</span>
+        <span id="scannerCount" style="color: var(--cyan-accent);">25 Instruments</span>
+      </div>
+
+      <div class="scanner-table-wrap">
+        <table class="scanner-table">
+          <thead>
+            <tr>
+              <th>INSTRUMENT</th>
+              <th>PRICE</th>
+              <th>SPREAD</th>
+              <th>HTF BIAS</th>
+              <th>SETUP</th>
+              <th>STATUS</th>
+              <th>SCORE</th>
+              <th>NET R</th>
+            </tr>
+          </thead>
+          <tbody id="scannerTableBody">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: CHARTS -->
+    <div id="tab-chart" class="tab-page">
+      <div class="section-label">
+        <span id="activeChartTitle">XAUUSD — 1H Candlestick Chart</span>
+        <span style="color: var(--cyan-accent);">SMC Overlays Active</span>
+      </div>
+
+      <div class="chart-box">
+        <div class="tf-selector">
+          <button class="tf-btn" onclick="setTimeframe('1M')">1M</button>
+          <button class="tf-btn" onclick="setTimeframe('1W')">1W</button>
+          <button class="tf-btn" onclick="setTimeframe('1D')">1D</button>
+          <button class="tf-btn" onclick="setTimeframe('4H')">4H</button>
+          <button class="tf-btn active" onclick="setTimeframe('1H')">1H</button>
+          <button class="tf-btn" onclick="setTimeframe('30m')">30m</button>
+          <button class="tf-btn" onclick="setTimeframe('15m')">15m</button>
+          <button class="tf-btn" onclick="setTimeframe('5m')">5m</button>
+        </div>
+
+        <canvas id="chartCanvas"></canvas>
+      </div>
+
+      <!-- 8-Timeframe Matrix -->
+      <div class="chart-box">
+        <div class="section-label" style="margin-bottom: 4px;">
+          <span style="color: var(--cyan-accent);">8-Timeframe Confluence Matrix</span>
+          <span style="font-size: 0.65rem; color: var(--text-muted);">Top-Down Order Flow</span>
+        </div>
+
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th>TIMEFRAME</th>
+              <th>ROLE</th>
+              <th>DIRECTIONAL BIAS</th>
+              <th>REGIME</th>
+              <th>AGREES</th>
+            </tr>
+          </thead>
+          <tbody id="matrixTableBody">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 4: RISK ENGINE -->
+    <div id="tab-risk" class="tab-page">
+      <div class="calc-card">
+        <div class="section-label" style="color: var(--cyan-accent);">
+          <span>Institutional Position Sizer</span>
+          <span>Risk-First Model</span>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Account Capital ($)</label>
+          <input type="number" id="riskCapitalInput" class="calc-input" value="100000" oninput="calculateRisk()">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Risk Percentage (%) [Max 1.0% Institutional Cap]</label>
+          <input type="number" id="riskPctInput" class="calc-input" value="0.5" step="0.25" oninput="calculateRisk()">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Stop-Loss Distance (Pips / Points)</label>
+          <input type="number" id="riskStopPipsInput" class="calc-input" value="20" oninput="calculateRisk()">
+        </div>
+
+        <div class="hero-stat">
+          <div>
+            <div style="font-size: 0.65rem; color: var(--text-muted);">RECOMMENDED LOT SIZE</div>
+            <div class="val" id="resLots">2.50 LOTS</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.65rem; color: var(--text-muted);">MAX CAPITAL RISK</div>
+            <div class="val" id="resDollarRisk" style="color: var(--bearish-red);">$500.00</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.6;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-dark); padding: 4px 0;">
+            <span>Estimated Commission ($7/lot):</span>
+            <span id="resCommission">$17.50</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-dark); padding: 4px 0;">
+            <span>Estimated Spread Friction:</span>
+            <span id="resSpreadCost">$15.00</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+            <span>Modeled Net Target Reward (2.2R):</span>
+            <span id="resNetReward" style="color: var(--bullish-green); font-weight: 700;">+$1,067.50</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: JOURNAL -->
+    <div id="tab-journal" class="tab-page">
+      <div class="calc-card">
+        <div class="section-label" style="color: var(--cyan-accent);">
+          <span>Trading Journal & Rule Compliance</span>
+          <span>Room Database Synced</span>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-bottom: 14px;">
+          <div>
+            <div style="font-size: 0.6rem; color: var(--text-muted);">TOTAL TRADES</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--cyan-accent);">14</div>
+          </div>
+          <div>
+            <div style="font-size: 0.6rem; color: var(--text-muted);">WIN RATE</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--bullish-green);">64.3%</div>
+          </div>
+          <div>
+            <div style="font-size: 0.6rem; color: var(--text-muted);">NET R TOTAL</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--bullish-green);">+11.4R</div>
+          </div>
+          <div>
+            <div style="font-size: 0.6rem; color: var(--text-muted);">RULE RATING</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--warning-amber);">4.9 / 5★</div>
+          </div>
+        </div>
+
+        <div id="journalList">
+          <div style="background: var(--surface-variant); padding: 10px; border-radius: 6px; margin-bottom: 6px; font-size: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; font-weight: 700;">
+              <span>XAUUSD (LONG) • Sweep Reversal</span>
+              <span style="color: var(--bullish-green);">+2.2R ($1,100)</span>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">
+              Disciplined execution. Waited for 5M candle close rejection. Rule adherence: 5/5★
+            </div>
+          </div>
+          <div style="background: var(--surface-variant); padding: 10px; border-radius: 6px; margin-bottom: 6px; font-size: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; font-weight: 700;">
+              <span>US100 (LONG) • FVG Continuation</span>
+              <span style="color: var(--bullish-green);">+2.4R ($1,200)</span>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">
+              Mitigation tap of H1 Fair Value Gap during London/NY overlap.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: ACADEMY -->
+    <div id="tab-academy" class="tab-page">
+      <div class="calc-card">
+        <div class="section-label" style="color: var(--cyan-accent);">
+          <span>APEX TRADING ACADEMY</span>
+          <span>7-Level Curriculum</span>
+        </div>
+
+        <div style="font-size: 0.78rem; line-height: 1.6; color: var(--text-secondary);">
+          <div style="background: var(--surface-variant); padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+            <strong style="color: var(--cyan-accent);">Level 1: Foundations</strong> — Bid/Ask spreads, tick value, order matching, slippage mechanics.
+          </div>
+          <div style="background: var(--surface-variant); padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+            <strong style="color: var(--cyan-accent);">Level 2: Technicals</strong> — Break of Structure (BOS) vs Change of Character (CHoCH).
+          </div>
+          <div style="background: var(--surface-variant); padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+            <strong style="color: var(--cyan-accent);">Level 3: Price Action</strong> — Liquidity sweeps, Order blocks, 3-candle Fair Value Gaps (FVG).
+          </div>
+          <div style="background: var(--surface-variant); padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+            <strong style="color: var(--cyan-accent);">Level 4: Macro</strong> — Interest rate differentials, US Real Yields, high-impact news blackout.
+          </div>
+          <div style="background: var(--surface-variant); padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+            <strong style="color: var(--cyan-accent);">Level 5: Execution</strong> — Closed-candle trigger confirmation, precise stop invalidation.
+          </div>
+          <div style="background: var(--surface-variant); padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+            <strong style="color: var(--cyan-accent);">Level 6: Quant</strong> — Mathematical expectancy formula: (Win% &times; Avg Win) - (Loss% &times; Avg Loss).
+          </div>
+          <div style="background: var(--surface-variant); padding: 10px; border-radius: 6px;">
+            <strong style="color: var(--cyan-accent);">Level 7: Psychology</strong> — Tilt elimination, 2-loss cooldown safeguard, capital preservation.
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" onclick="switchTab('dashboard')">
+      <span class="nav-icon">🎯</span>
+      <span>Terminal</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('scanner')">
+      <span class="nav-icon">🔍</span>
+      <span>Scanner</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('chart')">
+      <span class="nav-icon">📈</span>
+      <span>Charts</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('risk')">
+      <span class="nav-icon">🧮</span>
+      <span>Risk</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('journal')">
+      <span class="nav-icon">📓</span>
+      <span>Journal</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('academy')">
+      <span class="nav-icon">📚</span>
+      <span>Academy</span>
+    </div>
+  </nav>
+
+  <script>
+    // Initial Market Data
+    const instruments = [
+      { symbol: 'XAUUSD', name: 'Gold / US Dollar', price: 2654.40, change: 0.85, spread: 1.8, pipSize: 0.01, tickValue: 1.0 },
+      { symbol: 'US100', name: 'Nasdaq 100 Index', price: 20280.50, change: 0.45, spread: 1.2, pipSize: 0.25, tickValue: 5.0 },
+      { symbol: 'EURUSD', name: 'Euro / US Dollar', price: 1.09340, change: -0.22, spread: 0.6, pipSize: 0.0001, tickValue: 10.0 },
+      { symbol: 'GBPUSD', name: 'British Pound / USD', price: 1.30680, change: -0.40, spread: 0.9, pipSize: 0.0001, tickValue: 10.0 },
+      { symbol: 'USDJPY', name: 'US Dollar / Yen', price: 149.250, change: 0.55, spread: 0.7, pipSize: 0.01, tickValue: 6.7 },
+      { symbol: 'USOIL', name: 'WTI Crude Oil', price: 75.80, change: -1.15, spread: 2.4, pipSize: 0.01, tickValue: 10.0 },
+      { symbol: 'BTCUSD', name: 'Bitcoin / US Dollar', price: 64280.00, change: 2.40, spread: 4.5, pipSize: 1.0, tickValue: 1.0 },
+      { symbol: 'ETHUSD', name: 'Ethereum / US Dollar', price: 2540.50, change: 1.75, spread: 2.8, pipSize: 0.1, tickValue: 1.0 }
+    ];
+
+    const signals = [
+      {
+        id: 'SIG-XAUUSD-101',
+        symbol: 'XAUUSD',
+        direction: 'LONG',
+        setup: 'Institutional Liquidity Sweep & Reversal',
+        state: 'CONFIRMED',
+        score: 92,
+        netR: 2.2,
+        entry: 2654.40,
+        sl: 2648.00,
+        tp1: 2668.50
+      },
+      {
+        id: 'SIG-US100-102',
+        symbol: 'US100',
+        direction: 'LONG',
+        setup: 'Fair Value Gap Imbalance Continuation',
+        state: 'CONFIRMED',
+        score: 89,
+        netR: 2.4,
+        entry: 20280.50,
+        sl: 20220.00,
+        tp1: 20425.00
+      },
+      {
+        id: 'SIG-EURUSD-103',
+        symbol: 'EURUSD',
+        direction: 'SHORT',
+        setup: 'Displacement Order Block Mitigation',
+        state: 'WAITING_FOR_CONFIRMATION',
+        score: 81,
+        netR: 2.1,
+        entry: 1.09340,
+        sl: 1.09540,
+        tp1: 1.08920
+      },
+      {
+        id: 'SIG-GBPUSD-104',
+        symbol: 'GBPUSD',
+        direction: 'SHORT',
+        setup: 'Change of Character (CHoCH) Structural Shift',
+        state: 'POTENTIAL',
+        score: 76,
+        netR: 2.0,
+        entry: 1.30680,
+        sl: 1.30950,
+        tp1: 1.30140
+      }
+    ];
+
+    // Render Ticker
+    function renderTicker() {
+      const container = document.getElementById('tickerRow');
+      container.innerHTML = instruments.map(inst => `
+        <div class="quote-card" onclick="selectAsset('${inst.symbol}')">
+          <div class="quote-header">
+            <span class="quote-symbol">${inst.symbol}</span>
+            <span class="quote-change" style="color: ${inst.change >= 0 ? 'var(--bullish-green)' : 'var(--bearish-red)'}">
+              ${inst.change >= 0 ? '+' : ''}${inst.change}%
+            </span>
+          </div>
+          <div class="quote-price">${inst.price >= 1000 ? inst.price.toLocaleString('en-US', {minimumFractionDigits: 2}) : inst.price.toFixed(inst.symbol.includes('USD') && inst.price < 5 ? 5 : 2)}</div>
+          <div class="quote-spread">Sprd: ${inst.spread} pips</div>
+        </div>
+      `).join('');
+    }
+
+    // Render Signals
+    function renderSignals() {
+      const confirmedContainer = document.getElementById('confirmedSignalsList');
+      const developingContainer = document.getElementById('developingSignalsList');
+
+      const confirmed = signals.filter(s => s.state === 'CONFIRMED');
+      const developing = signals.filter(s => s.state !== 'CONFIRMED');
+
+      document.getElementById('activeSetupCount').textContent = `${confirmed.length} Setups Qualified`;
+
+      confirmedContainer.innerHTML = confirmed.map(sig => createSignalHTML(sig)).join('');
+      developingContainer.innerHTML = developing.map(sig => createSignalHTML(sig)).join('');
+    }
+
+    function createSignalHTML(sig) {
+      const isLong = sig.direction === 'LONG';
+      const isConfirmed = sig.state === 'CONFIRMED';
+      return `
+        <div class="signal-card" onclick="selectAsset('${sig.symbol}')">
+          <div class="signal-top">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <strong style="font-size: 0.95rem;">${sig.symbol}</strong>
+              <span class="direction-badge ${isLong ? 'long' : 'short'}">${sig.direction}</span>
+            </div>
+            <span class="status-tag ${isConfirmed ? 'confirmed' : 'waiting'}">${sig.state}</span>
+          </div>
+          <div class="signal-setup-title">${sig.setup}</div>
+          <div class="metrics-bar">
+            <div class="metric-col">
+              <span>SCORE</span>
+              <strong style="color: var(--cyan-accent);">${sig.score}/100</strong>
+            </div>
+            <div class="metric-col">
+              <span>NET R</span>
+              <strong style="color: var(--bullish-green);">${sig.netR}R</strong>
+            </div>
+            <div class="metric-col">
+              <span>ENTRY</span>
+              <span>${sig.entry}</span>
+            </div>
+            <div class="metric-col">
+              <span>STOP LOSS</span>
+              <span style="color: var(--bearish-red);">${sig.sl}</span>
+            </div>
+            <div class="metric-col">
+              <span>TP1</span>
+              <span style="color: var(--bullish-green);">${sig.tp1}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Render Scanner Table
+    function renderScanner() {
+      const tbody = document.getElementById('scannerTableBody');
+      tbody.innerHTML = instruments.map(inst => {
+        const sig = signals.find(s => s.symbol === inst.symbol);
+        const score = sig ? sig.score : Math.floor(65 + Math.random() * 15);
+        const netR = sig ? sig.netR : '1.8';
+        const setup = sig ? sig.setup.split(' ')[0] : 'Consolidation';
+        const status = sig ? sig.state : 'NO TRADE';
+        const isBull = inst.change >= 0;
+
+        return `
+          <tr onclick="selectAsset('${inst.symbol}')">
+            <td><strong>${inst.symbol}</strong> <span style="font-size: 0.65rem; color: var(--text-muted);">${inst.name.split('/')[0]}</span></td>
+            <td style="color: var(--cyan-accent); font-family: monospace;">${inst.price}</td>
+            <td style="color: var(--text-secondary);">${inst.spread}p</td>
+            <td><span class="bias-tag ${isBull ? 'bullish' : 'bearish'}">${isBull ? 'BULLISH' : 'BEARISH'}</span></td>
+            <td>${setup}</td>
+            <td><span class="status-tag ${status === 'CONFIRMED' ? 'confirmed' : 'waiting'}">${status}</span></td>
+            <td style="font-weight: 700; color: ${score >= 85 ? 'var(--bullish-green)' : 'var(--warning-amber)'};">${score}/100</td>
+            <td style="font-weight: 700; color: var(--bullish-green);">${netR}R</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Render 8-Timeframe Matrix
+    function renderMatrix() {
+      const tfs = [
+        { tf: '1M', role: 'Macro Context & Dealing Range', bias: 'BULLISH', regime: 'Trending Expansion', agrees: '✓' },
+        { tf: '1W', role: 'Swing Structure & Key Liquidity', bias: 'BULLISH', regime: 'Trending Expansion', agrees: '✓' },
+        { tf: '1D', role: 'Dealing Range, Bias & S/R', bias: 'BULLISH', regime: 'Trending Expansion', agrees: '✓' },
+        { tf: '4H', role: 'Actionable Swings & Zones', bias: 'BULLISH', regime: 'Trending Expansion', agrees: '✓' },
+        { tf: '1H', role: 'Structure Refinement & Reaction', bias: 'BULLISH', regime: 'Trending Expansion', agrees: '✓' },
+        { tf: '30m', role: 'Intraday Intermediate Confirmation', bias: 'BULLISH', regime: 'Consolidation', agrees: '✓' },
+        { tf: '15m', role: 'Entry Setup & FVG Validation', bias: 'BULLISH', regime: 'Trending Expansion', agrees: '✓' },
+        { tf: '5m', role: 'Execution Trigger & Invalidation', bias: 'BULLISH', regime: 'Trigger Confirmed', agrees: '✓' }
+      ];
+
+      const tbody = document.getElementById('matrixTableBody');
+      tbody.innerHTML = tfs.map(t => `
+        <tr>
+          <td><strong style="color: var(--cyan-accent); font-family: monospace;">${t.tf}</strong></td>
+          <td style="color: var(--text-secondary); font-size: 0.65rem;">${t.role}</td>
+          <td><span class="bias-tag bullish">${t.bias}</span></td>
+          <td style="color: var(--text-muted);">${t.regime}</td>
+          <td style="color: var(--bullish-green); font-weight: 700;">${t.agrees}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Canvas Candlestick Chart Renderer
+    function drawChart() {
+      const canvas = document.getElementById('chartCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const width = canvas.parentElement.clientWidth - 24;
+      const height = 280;
+
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.scale(dpr, dpr);
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Generate 40 synthetic realistic candles
+      const candles = [];
+      let base = 2642;
+      for (let i = 0; i < 35; i++) {
+        const open = base;
+        const trend = Math.sin(i * 0.25) * 3 + (i > 25 ? 5 : -1);
+        const close = open + trend + (Math.random() * 4 - 2);
+        const high = Math.max(open, close) + Math.random() * 3;
+        const low = Math.min(open, close) - Math.random() * 3;
+        candles.push({ open, high, low, close });
+        base = close;
+      }
+
+      const minPrice = Math.min(...candles.map(c => c.low)) - 2;
+      const maxPrice = Math.max(...candles.map(c => c.high)) + 2;
+      const priceRange = maxPrice - minPrice;
+
+      const slotWidth = (width - 60) / candles.length;
+      const bodyWidth = Math.max(slotWidth * 0.65, 3);
+
+      function toY(p) {
+        return height - ((p - minPrice) / priceRange) * (height - 30) - 15;
+      }
+
+      // Draw Grid
+      ctx.strokeStyle = '#1E2D4A';
+      ctx.lineWidth = 1;
+      for (let g = 0; g < 4; g++) {
+        const y = 20 + g * ((height - 40) / 3);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width - 55, y);
+        ctx.stroke();
+
+        const p = maxPrice - (g * (priceRange / 3));
+        ctx.fillStyle = '#64748B';
+        ctx.font = '9px "JetBrains Mono", monospace';
+        ctx.fillText(p.toFixed(2), width - 50, y + 3);
+      }
+
+      // FVG Zone Overlay
+      const fvgTop = toY(2656);
+      const fvgBot = toY(2651);
+      ctx.fillStyle = 'rgba(0, 229, 186, 0.12)';
+      ctx.fillRect(0, fvgTop, width - 55, Math.abs(fvgBot - fvgTop));
+      ctx.fillStyle = '#00E5BA';
+      ctx.font = '8px Inter, sans-serif';
+      ctx.fillText('H1 Fair Value Gap (Bullish)', 10, fvgTop + 10);
+
+      // Candlesticks
+      candles.forEach((c, idx) => {
+        const x = idx * slotWidth + slotWidth / 2;
+        const isBull = c.close >= c.open;
+        const color = isBull ? '#00C896' : '#FF4B55';
+
+        // Wick
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x, toY(c.high));
+        ctx.lineTo(x, toY(c.low));
+        ctx.stroke();
+
+        // Body
+        const topY = toY(Math.max(c.open, c.close));
+        const botY = toY(Math.min(c.open, c.close));
+        ctx.fillStyle = color;
+        ctx.fillRect(x - bodyWidth / 2, topY, bodyWidth, Math.max(botY - topY, 2));
+      });
+
+      // Entry & SL Lines
+      const entryY = toY(2654.40);
+      const slY = toY(2648.00);
+      const tpY = toY(2668.50);
+
+      // Entry
+      ctx.strokeStyle = '#00E5BA';
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, entryY);
+      ctx.lineTo(width - 55, entryY);
+      ctx.stroke();
+      ctx.fillStyle = '#00E5BA';
+      ctx.fillText('ENTRY 2654.40', 10, entryY - 4);
+
+      // Stop Loss
+      ctx.strokeStyle = '#FF4B55';
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(0, slY);
+      ctx.lineTo(width - 55, slY);
+      ctx.stroke();
+      ctx.fillStyle = '#FF4B55';
+      ctx.fillText('SL 2648.00', 10, slY - 4);
+
+      // TP1
+      ctx.strokeStyle = '#00C896';
+      ctx.beginPath();
+      ctx.moveTo(0, tpY);
+      ctx.lineTo(width - 55, tpY);
+      ctx.stroke();
+      ctx.fillStyle = '#00C896';
+      ctx.fillText('TP1 2668.50 (+2.2R)', 10, tpY - 4);
+    }
+
+    // Risk Calculator Logic
+    function calculateRisk() {
+      const cap = parseFloat(document.getElementById('riskCapitalInput').value) || 100000;
+      const pct = parseFloat(document.getElementById('riskPctInput').value) || 0.5;
+      const stopPips = parseFloat(document.getElementById('riskStopPipsInput').value) || 20;
+
+      const dollarRisk = cap * (pct / 100);
+      const pipValStandardLot = 10; // $10/pip on EURUSD standard lot
+      const lots = (dollarRisk / (stopPips * pipValStandardLot)).toFixed(2);
+      const commission = (lots * 7).toFixed(2);
+      const spreadCost = (lots * 6).toFixed(2);
+      const netReward = (dollarRisk * 2.2 - (parseFloat(commission) + parseFloat(spreadCost))).toFixed(2);
+
+      document.getElementById('resLots').textContent = `${lots} LOTS`;
+      document.getElementById('resDollarRisk').textContent = `$${dollarRisk.toFixed(2)}`;
+      document.getElementById('resCommission').textContent = `$${commission}`;
+      document.getElementById('resSpreadCost').textContent = `$${spreadCost}`;
+      document.getElementById('resNetReward').textContent = `+$${netReward}`;
+    }
+
+    // Tab Navigation
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-page').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+      const targetPage = document.getElementById(`tab-${tabId}`);
+      if (targetPage) targetPage.classList.add('active');
+
+      const tabs = ['dashboard', 'scanner', 'chart', 'risk', 'journal', 'academy'];
+      const idx = tabs.indexOf(tabId);
+      if (idx >= 0) {
+        document.querySelectorAll('.nav-item')[idx].classList.add('active');
+      }
+
+      if (tabId === 'chart') {
+        setTimeout(drawChart, 100);
+      }
+    }
+
+    function selectAsset(symbol) {
+      document.getElementById('activeChartTitle').textContent = `${symbol} — 1H Candlestick Chart`;
+      switchTab('chart');
+    }
+
+    function setTimeframe(tf) {
+      document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      drawChart();
+    }
+
+    // Live Tick Simulation
+    setInterval(() => {
+      instruments.forEach(inst => {
+        const delta = (Math.random() - 0.49) * (inst.pipSize * 2);
+        inst.price = +(inst.price + delta).toFixed(inst.symbol.includes('USD') && inst.price < 5 ? 5 : 2);
+      });
+      renderTicker();
+    }, 2000);
+
+    // Initial Load
+    window.addEventListener('DOMContentLoaded', () => {
+      renderTicker();
+      renderSignals();
+      renderScanner();
+      renderMatrix();
+      calculateRisk();
+      window.addEventListener('resize', () => {
+        if (document.getElementById('tab-chart').classList.contains('active')) {
+          drawChart();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
