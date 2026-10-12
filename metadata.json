@@ -1,0 +1,6 @@
+{
+  "name": "APEX SNIPER AI",
+  "description": "Institutional multi-asset trading intelligence terminal featuring 8-timeframe analysis, market structure, liquidity sweeps, strict risk engine, signal journal, and trading academy.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
